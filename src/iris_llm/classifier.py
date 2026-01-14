@@ -28,20 +28,19 @@ class IrisLLMClassifier:
     def __init__(self, model_name: str = "llama3.2:1b"):
         self.model_name = model_name
         self.system_prompt = (
-                "You are a specialized botanical classifier. Your goal is to identify Iris species "
-                "with high objectivity. \n\n"
-                
-                "### CLASSIFICATION RULES:\n"
-                "1. SETOSA: Typically has very small petals (length < 2cm) and wide sepals.\n"
-                "2. VERSICOLOR: Medium-sized petals (length between 3cm and 5cm).\n"
-                "3. VIRGINICA: Large petals (length > 5cm) and generally larger overall measurements.\n\n"
-                
-                "### CONSTRAINTS:\n"
-                "- Do not favor one species over another. Every sample is a new case.\n"
-                "- Analyze the ratio between petal length and sepal width carefully.\n"
-                "- Respond ONLY in JSON with: 'species', 'confidence', 'reasoning'.\n"
-                "- The 'species' value must be lowercase: 'setosa', 'versicolor', or 'virginica'."
-            )
+            "You are a specialized botanical classifier. Your goal is to identify Iris species "
+            "with high objectivity. \n\n"
+            "### CLASSIFICATION RULES:\n"
+            "1. SETOSA: Typically has very small petals (length < 2cm) and wide sepals.\n"
+            "2. VERSICOLOR: Medium-sized petals (length between 3cm and 5cm).\n"
+            "3. VIRGINICA: Large petals (length > 5cm) and generally larger overall measurements.\n"
+            "\n"
+            "### CONSTRAINTS:\n"
+            "- Do not favor one species over another. Every sample is a new case.\n"
+            "- Analyze the ratio between petal length and sepal width carefully.\n"
+            "- Respond ONLY in JSON with: 'species', 'confidence', 'reasoning'.\n"
+            "- The 'species' value must be lowercase: 'setosa', 'versicolor', or 'virginica'."
+        )
 
     def classify(self, sample: IrisSample) -> ClassificationResult | None:
         """
@@ -74,7 +73,7 @@ class IrisLLMClassifier:
 
 class ScikitIrisLLM:
     """Wrapper using parallel threads to speed up Ollama inference."""
-    
+
     def __init__(self, classifier: IrisLLMClassifier, max_workers: int = 4):
         self.classifier = classifier
         self.max_workers = max_workers
@@ -82,20 +81,19 @@ class ScikitIrisLLM:
     def predict(self, X: List[IrisSample]) -> np.ndarray:
         """Predicts labels for a list of samples using parallel workers."""
         logger.info(f"Inference in progress with {self.max_workers} threads...")
-        
+
         # We use a thread pool to handle concurrent API calls to Ollama
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # map maintains the order of results, which is crucial for sklearn metrics
-            results = list(tqdm(
-                executor.map(self.classifier.classify, X), 
-                total=len(X), 
-                desc="Parallel LLM Inference"
-            ))
-            
-        return np.array([
-            res.species.lower() if res else "unknown" 
-            for res in results
-        ])
+            results = list(
+                tqdm(
+                    executor.map(self.classifier.classify, X),
+                    total=len(X),
+                    desc="Parallel LLM Inference",
+                )
+            )
+
+        return np.array([res.species.lower() if res else "unknown" for res in results])
 
 
 if __name__ == "__main__":

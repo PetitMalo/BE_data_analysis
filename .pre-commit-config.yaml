@@ -1,0 +1,26 @@
+# On définit les outils à lancer
+repos:
+  # 1. Des petits utilitaires de base indispensables
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace      # Supprime les espaces inutiles en fin de ligne
+      - id: end-of-file-fixer        # S'assure qu'il y a une ligne vide à la fin des fichiers
+      - id: check-yaml               # Vérifie la syntaxe de tes fichiers .yaml
+      - id: check-added-large-files  # Empêche de commit des fichiers trop lourds par erreur
+
+  # 2. RUFF : Il remplace (en beaucoup plus rapide) Flake8, Isort et Black
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.0
+    hooks:
+      - id: ruff
+        args: [ --fix ]              # Répare automatiquement ce qu'il peut
+      - id: ruff-format              # S'occupe de la mise en forme (le "style")
+
+  # 3. MYPY : Pour le check des types
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.9.0
+    hooks:
+      - id: mypy
+        # On lui dit d'utiliser les types de tes bibliothèques si besoin
+        additional_dependencies: [types-requests, types-setuptools]

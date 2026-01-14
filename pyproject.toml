@@ -8,6 +8,7 @@ dependencies = [
     "matplotlib>=3.10.8",
     "ollama>=0.6.1",
     "pandas>=2.3.3",
+    "pre-commit>=4.5.1",
     "pydantic>=2.12.5",
     "ruff>=0.14.11",
     "scikit-learn>=1.8.0",
@@ -25,3 +26,8 @@ select = ["E", "F", "I"]
 dev = [
     "mypy>=1.19.1",
 ]
+
+[tool.mypy]
+mypy_path = "."
+explicit_package_bases = true
+namespace_packages = true
