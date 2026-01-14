@@ -6,9 +6,12 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "matplotlib>=3.10.8",
+    "ollama>=0.6.1",
     "pandas>=2.3.3",
+    "pydantic>=2.12.5",
     "ruff>=0.14.11",
     "scikit-learn>=1.8.0",
+    "tqdm>=4.67.1",
 ]
 
 [tool.ruff]
@@ -17,3 +20,8 @@ line-length = 100
 [tool.ruff.lint]
 # Tu peux choisir tes règles ici (E = Error, F = Pyflakes, I = isort)
 select = ["E", "F", "I"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+]
