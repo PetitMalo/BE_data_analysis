@@ -11,7 +11,7 @@ class IrisSample(BaseModel):
     sepal_width: float = Field(..., alias="sepal width (cm)")
     petal_length: float = Field(..., alias="petal length (cm)")
     petal_width: float = Field(..., alias="petal width (cm)")
-    target_name: str | None = None
+    target_name: str
 
     def to_natural_language(self) -> str:
         """Converts the numerical data into a descriptive sentence for the LLM."""
@@ -23,15 +23,15 @@ class IrisSample(BaseModel):
         )
 
 
-def get_iris_data(sample: int = -1) -> List[IrisSample]:
+def get_iris_data(num_sample: int = -1) -> List[IrisSample]:
     """
     Loads the Iris dataset and returns a list of validated IrisSample objects.
     """
     iris = load_iris(as_frame=True)
     df = iris.frame
 
-    if sample != -1:
-        df = df.sample(n=sample)
+    if num_sample != -1:
+        df = df.sample(n=num_sample)
 
     # Mapping numeric targets to their botanical names
     target_mapping = {i: name for i, name in enumerate(iris.target_names)}
