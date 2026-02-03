@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import optuna
 from sklearn.ensemble import GradientBoostingClassifier
@@ -10,6 +12,8 @@ def find_xgb_hyperparams(
     y_train: np.ndarray,
     X_val: np.ndarray,
     y_val: np.ndarray,
+    n_trials: int = 50,
+    n_jobs: int = -1,
     verbose: bool = True,
 ) -> dict:
     def objective(trial):
@@ -27,8 +31,22 @@ def find_xgb_hyperparams(
         logger.info(f"Validation score: {score}")
         return score
 
-    study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=50)
+    db_name = "optuna_study.db"
+    storage_name = f"sqlite:///{db_name}"
+
+    # On supprime l'ancienne DB si elle existe pour repartir à neuf
+    if os.path.exists(db_name):
+        os.remove(db_name)
+
+    study = optuna.create_study(
+        study_name="xgb_optimization",
+        direction="maximize",
+        storage=storage_name,
+        pruner=optuna.pruners.MedianPruner(),
+        sampler=optuna.samplers.TPESampler(),
+        load_if_exists=False,
+    )
+    study.optimize(objective, n_trials=n_trials, n_jobs=n_jobs, show_progress_bar=verbose)
 
     logger.info(f"Best hyperparameters: {study.best_params}")
     return study.best_params
