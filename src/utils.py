@@ -1,7 +1,10 @@
+import loguru
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix
+
+logger = loguru.logger
 
 
 def predict_classifier(classifier, x_data, y_true, plot_cm=False):
@@ -65,10 +68,10 @@ def metrics_classifier(cm, plot=False):
     else:
         f1_score = 0
     if plot:
-        print(f"Accuracy: {100*accuracy:.2f}%")
-        print(f"Precision: {100*precision:.2f}%")
-        print(f"Recall: {100*recall:.2f}%")
-        print(f"F1-score: {100*f1_score:.2f}%")
+        print(f"Accuracy: {100 * accuracy:.2f}%")
+        print(f"Precision: {100 * precision:.2f}%")
+        print(f"Recall: {100 * recall:.2f}%")
+        print(f"F1-score: {100 * f1_score:.2f}%")
 
     return {"accuracy": accuracy, "precision": precision, "recall": recall, "f1_score": f1_score}
 
