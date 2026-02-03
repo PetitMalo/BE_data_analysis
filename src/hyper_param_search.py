@@ -23,7 +23,7 @@ def find_xgb_hyperparams_gpu(
         param = {
             "n_estimators": trial.suggest_int("n_estimators", 20, 200),
             "max_depth": trial.suggest_int("max_depth", 1, 10),
-            "learning_rate": trial.suggest_loguniform("learning_rate", 0.001, 0.3),
+            "learning_rate": trial.suggest_float("learning_rate", 0.001, 0.3, log=True),
             "subsample": trial.suggest_float("subsample", 0.5, 1.0),
             # --- CONFIGURATION GPU ---
             "tree_method": "hist",  # Méthode rapide basée sur les histogrammes
@@ -31,7 +31,7 @@ def find_xgb_hyperparams_gpu(
         }
 
         logger.info(f"Testing parameters: {param}")
-        clf = xgb.XGBClassifier(**param, random_state=42, verbose=verbose)
+        clf = xgb.XGBClassifier(**param, random_state=42)
         clf.fit(X_train, y_train)
         score = clf.score(X_val, y_val)
         logger.info(f"Validation score: {score}")
