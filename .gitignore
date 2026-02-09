@@ -10,3 +10,4 @@ wheels/
 .venv
 
 models/scaler/*
+optuna_study.db
