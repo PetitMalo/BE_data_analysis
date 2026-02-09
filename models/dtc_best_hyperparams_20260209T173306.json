@@ -1,0 +1,6 @@
+{
+    "max_depth": 236,
+    "min_samples_split": 16,
+    "min_samples_leaf": 1,
+    "criterion": "gini"
+}

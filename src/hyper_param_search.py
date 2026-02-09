@@ -6,10 +6,13 @@ import numpy as np
 import optuna
 import xgboost as xgb
 from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
 from src.utils import logger
 
 DEVICE = "cuda"
+SEED = 42
 
 
 def find_xgb_hyperparams_gpu(
@@ -33,7 +36,7 @@ def find_xgb_hyperparams_gpu(
         }
 
         logger.info(f"Testing parameters: {param}")
-        clf = xgb.XGBClassifier(**param, random_state=42)
+        clf = xgb.XGBClassifier(**param, random_state=SEED)
         clf.fit(X_train, y_train)
         score = clf.score(X_val, y_val)
         logger.info(f"Validation score: {score}")
@@ -89,7 +92,7 @@ def find_mlp_hyperparams(
         param["hidden_layer_sizes"] = tuple(layers)
 
         logger.info(f"Testing parameters: {param}")
-        mlp_clf = MLPClassifier(**param, random_state=42)
+        mlp_clf = MLPClassifier(**param, random_state=SEED)
         mlp_clf = mlp_clf.fit(X_train, y_train)
         training_score = mlp_clf.score(X_train, y_train)
         score = mlp_clf.score(X_val, y_val)
@@ -122,6 +125,117 @@ def find_mlp_hyperparams(
     os.makedirs(output_dir, exist_ok=True)
     with open(
         os.path.join(output_dir, f"mlp_best_hyperparams_{timestamp}.json"),
+        "w",
+    ) as f:
+        json.dump(best_params, f, indent=4)
+
+    logger.info(f"Best hyperparameters: {best_params}")
+    return best_params
+
+
+def find_dtc_hyperparams(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    n_trials: int = 50,
+    verbose: bool = True,
+    output_dir: str = "./models",
+) -> dict:
+    def objective(trial):
+        max_depth = trial.suggest_int("max_depth", 3, 256)
+        min_samples_split = trial.suggest_int("min_samples_split", 2, 16)
+        min_samples_leaf = trial.suggest_int("min_samples_leaf", 1, 8)
+        criterion = trial.suggest_categorical("criterion", ["gini", "entropy"])
+
+        clf = DecisionTreeClassifier(
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            criterion=criterion,
+            random_state=SEED,
+        )
+        logger.info(f"Testing parameters: {clf.get_params()}")
+
+        clf.fit(X_train, y_train)
+        training_score = clf.score(X_train, y_train)
+        score = clf.score(X_val, y_val)
+        logger.info(f"Validation score: {score} - Training score {training_score}")
+        return score
+
+    db_name = "optuna_study.db"
+    storage_name = f"sqlite:///{db_name}"
+
+    # On supprime l'ancienne DB si elle existe pour repartir à neuf
+    if os.path.exists(db_name):
+        os.remove(db_name)
+
+    study = optuna.create_study(
+        study_name="dtc_optimization_gpu",
+        direction="maximize",
+        storage=storage_name,
+        pruner=optuna.pruners.MedianPruner(),
+        sampler=optuna.samplers.TPESampler(),
+        load_if_exists=False,
+    )
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=verbose)
+    best_params = study.best_params
+
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    os.makedirs(output_dir, exist_ok=True)
+    with open(
+        os.path.join(output_dir, f"dtc_best_hyperparams_{timestamp}.json"),
+        "w",
+    ) as f:
+        json.dump(best_params, f, indent=4)
+
+    logger.info(f"Best hyperparameters: {best_params}")
+    return best_params
+
+
+def find_svm_hyperparams(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    n_trials: int = 50,
+    verbose: bool = True,
+    output_dir: str = "./models",
+) -> dict:
+    def objective(trial):
+        svc_C = trial.suggest_float("C", 0.1, 1000)
+        svc_gamma = trial.suggest_float("gamma", 0.0001, 1)
+        svc_kernal = trial.suggest_categorical("kernel", ["rbf", "poly"])
+        svc = SVC(C=svc_C, gamma=svc_gamma, kernel=svc_kernal, random_state=SEED)
+        logger.info(f"Testing parameters: {svc.get_params()}")
+
+        svc.fit(X_train, y_train)
+        training_score = svc.score(X_train, y_train)
+        score = svc.score(X_val, y_val)
+        logger.info(f"Validation score: {score} - Training score {training_score}")
+        return score
+
+    db_name = "optuna_study.db"
+    storage_name = f"sqlite:///{db_name}"
+
+    if os.path.exists(db_name):
+        os.remove(db_name)
+
+    study = optuna.create_study(
+        study_name="svm_optimization_gpu",
+        direction="maximize",
+        storage=storage_name,
+        pruner=optuna.pruners.MedianPruner(),
+        sampler=optuna.samplers.TPESampler(),
+        load_if_exists=False,
+    )
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=verbose)
+    best_params = study.best_params
+
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    os.makedirs(output_dir, exist_ok=True)
+    with open(
+        os.path.join(output_dir, f"svm_best_hyperparams_{timestamp}.json"),
         "w",
     ) as f:
         json.dump(best_params, f, indent=4)
