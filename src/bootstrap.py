@@ -2,8 +2,6 @@ import os
 import subprocess
 import sys
 
-from src.utils import logger
-
 
 def setup(repo_name="BE_data_analysis"):
     if not os.path.exists(repo_name):
@@ -21,7 +19,7 @@ def setup(repo_name="BE_data_analysis"):
     if os.getcwd() not in sys.path:
         sys.path.append(os.getcwd())
 
-    logger.info(f"Project {repo_name} is ready.")
+    print(f"Project {repo_name} is ready.")
 
 
 if __name__ == "__main__":
