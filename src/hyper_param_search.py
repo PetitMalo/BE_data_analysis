@@ -93,9 +93,7 @@ def find_mlp_hyperparams(
         mlp_clf = mlp_clf.fit(X_train, y_train)
         training_score = mlp_clf.score(X_train, y_train)
         score = mlp_clf.score(X_val, y_val)
-        logger.info(
-            f"Validation score: {score} - Training score {training_score} - Epochs {mlp_clf.n_iter}"
-        )
+        logger.info(f"Validation score: {score} - Training score {training_score}")
         return score
 
     db_name = "optuna_study.db"
