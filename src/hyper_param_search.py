@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 import optuna
 import xgboost as xgb
-from cuml.neural_network import MLPClassifier
+from sklearn.neural_network import MLPClassifier
 
 from src.utils import logger
 
