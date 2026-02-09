@@ -112,7 +112,11 @@ def find_mlp_hyperparams(
         load_if_exists=False,
     )
     study.optimize(objective, n_trials=n_trials, show_progress_bar=verbose)
-    best_params = study.best_params
+    best_params = {}
+    layers = []
+    for i in range(study.best_params.get("n_layers")):
+        layers.append(study.best_params.get(f"n_units_{i}"))
+    best_params["hidden_layer_sizes"] = tuple(layers)
 
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     os.makedirs(output_dir, exist_ok=True)

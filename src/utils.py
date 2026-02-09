@@ -1,10 +1,60 @@
+import glob
+import json
+import os
+from typing import Any, Dict
+
 import loguru
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay, classification_report, confusion_matrix
 
 logger = loguru.logger
+
+
+def display_classification_metrics(
+    y_true: np.ndarray, y_pred: np.ndarray, labels: np.ndarray = None
+) -> None:
+    """
+    Display a comprehensive classification report and a normalized confusion matrix.
+    """
+    logger.info("Classification Report:")
+    print("\n", classification_report(y_true, y_pred))
+
+    cm = confusion_matrix(y_true, y_pred, normalize="true")
+
+    _, ax = plt.subplots(figsize=(10, 8))
+    display_labels = labels if labels is not None else np.unique(y_true)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=display_labels)
+    disp.plot(cmap=plt.cm.Blues, ax=ax, values_format=".2f", xticks_rotation=45)
+    ax.set_title("Normalized Confusion Matrix")
+    plt.tight_layout()
+    plt.show()
+
+
+def get_latest_hyperparams(
+    directory: str = "./models", prefix: str = "mlp_best_hyperparams"
+) -> Dict[str, Any]:
+    """
+    Find and load the most recent hyperparameter JSON file based on the filename timestamp.
+    """
+    # Recherche tous les fichiers correspondant au pattern
+    pattern = os.path.join(directory, f"{prefix}_*.json")
+    files = glob.glob(pattern)
+
+    if not files:
+        raise FileNotFoundError(
+            f"No hyperparameter files found in {directory} with prefix '{prefix}'"
+        )
+
+    # Comme votre format est YYYYMMDDTHHMMSS, le tri alphabétique
+    # correspond naturellement au tri chronologique.
+    latest_file = max(files)
+
+    logger.info("Loading latest hyperparameters from: %s", latest_file)
+
+    with open(latest_file, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def predict_classifier(classifier, x_data, y_true, plot_cm=False):
