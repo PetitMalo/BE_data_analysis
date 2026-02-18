@@ -5,7 +5,8 @@ from datetime import datetime
 import numpy as np
 import optuna
 import xgboost as xgb
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, make_scorer
+from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
@@ -135,14 +136,13 @@ def find_mlp_hyperparams(
 
 
 def find_dtc_hyperparams(
-    X_train: np.ndarray,
-    y_train: np.ndarray,
-    X_val: np.ndarray,
-    y_val: np.ndarray,
+    X: np.ndarray,
+    y: np.ndarray,
     n_trials: int = 50,
+    n_splits: int = 5,
     verbose: bool = True,
     output_dir: str = "./models",
-    metric: str = "accuracy",
+    metric: str = "f1",
 ) -> dict:
     def objective(trial):
         max_depth = trial.suggest_int("max_depth", 3, 256)
@@ -157,22 +157,23 @@ def find_dtc_hyperparams(
             criterion=criterion,
             random_state=SEED,
         )
-        logger.info(f"Testing parameters: {clf.get_params()}")
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
 
-        clf.fit(X_train, y_train)
-        if metric == "accuracy":
-            training_score = clf.score(X_train, y_train)
-            score = clf.score(X_val, y_val)
-        elif metric == "f1":
-            y_train_pred = clf.predict(X_train)
-            training_score = f1_score(y_train, y_train_pred, average="weighted")
-            y_val_pred = clf.predict(X_val)
-            score = f1_score(y_val, y_val_pred, average="weighted")
+        if metric == "f1":
+            scorer = make_scorer(f1_score, average="weighted")
         else:
-            logger.error(f"Unsupported metric: {metric}")
-            raise ValueError(f"Unsupported metric: {metric}")
-        logger.info(f"Validation score: {score} - Training score {training_score}")
-        return score
+            scorer = "accuracy"
+
+        scores = cross_val_score(clf, X, y, cv=skf, scoring=scorer, n_jobs=-1)
+        final_score = scores.mean()
+
+        if verbose:
+            logger.info(
+                f"Trial {trial.number} - CV {metric.upper()}: {final_score:.4f} "
+                f"(+/- {scores.std():.4f})"
+            )
+
+        return final_score
 
     db_name = "optuna_study.db"
     storage_name = f"sqlite:///{db_name}"
@@ -205,36 +206,31 @@ def find_dtc_hyperparams(
 
 
 def find_svm_hyperparams(
-    X_train: np.ndarray,
-    y_train: np.ndarray,
-    X_val: np.ndarray,
-    y_val: np.ndarray,
+    X: np.ndarray,
+    y: np.ndarray,
     n_trials: int = 50,
+    n_splits: int = 5,
     verbose: bool = True,
     output_dir: str = "./models",
-    metric: str = "accuracy",
+    metric: str = "f1",
 ) -> dict:
     def objective(trial):
-        svc_C = trial.suggest_float("C", 0.1, 1000)
-        svc_gamma = trial.suggest_float("gamma", 0.0001, 1)
-        svc_kernal = trial.suggest_categorical("kernel", ["rbf", "poly"])
-        svc = SVC(C=svc_C, gamma=svc_gamma, kernel=svc_kernal, random_state=SEED)
-        logger.info(f"Testing parameters: {svc.get_params()}")
+        svc_C = trial.suggest_float("C", 0.1, 1000, log=True)
+        svc_gamma = trial.suggest_float("gamma", 0.0001, 1, log=True)
+        svc_kernel = trial.suggest_categorical("kernel", ["rbf", "poly"])
 
-        svc.fit(X_train, y_train)
-        if metric == "accuracy":
-            training_score = svc.score(X_train, y_train)
-            score = svc.score(X_val, y_val)
-        elif metric == "f1":
-            y_train_pred = svc.predict(X_train)
-            training_score = f1_score(y_train, y_train_pred, average="weighted")
-            y_val_pred = svc.predict(X_val)
-            score = f1_score(y_val, y_val_pred, average="weighted")
+        svc = SVC(C=svc_C, gamma=svc_gamma, kernel=svc_kernel, random_state=SEED)
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
+
+        if metric == "f1":
+            scorer = make_scorer(f1_score, average="weighted")
         else:
-            logger.error(f"Unsupported metric: {metric}")
-            raise ValueError(f"Unsupported metric: {metric}")
-        logger.info(f"Validation score: {score} - Training score {training_score}")
-        return score
+            scorer = "accuracy"
+        scores = cross_val_score(svc, X, y, cv=skf, scoring=scorer, n_jobs=-1)
+        final_score = scores.mean()
+
+        logger.info(f"Trial {trial.number} - CV {metric.upper()} Mean: {final_score:.4f}")
+        return final_score
 
     db_name = "optuna_study.db"
     storage_name = f"sqlite:///{db_name}"
