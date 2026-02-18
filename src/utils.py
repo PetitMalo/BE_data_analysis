@@ -139,7 +139,6 @@ def compare_models(models_dict, x_test, y_test):
 
     for name, model in models_dict.items():
         y_pred = model.predict(x_test)
-        from sklearn.metrics import confusion_matrix
 
         cm = confusion_matrix(y_test, y_pred)
 

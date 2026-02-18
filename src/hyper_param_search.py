@@ -5,6 +5,7 @@ from datetime import datetime
 import numpy as np
 import optuna
 import xgboost as xgb
+from sklearn.metrics import f1_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
@@ -141,6 +142,7 @@ def find_dtc_hyperparams(
     n_trials: int = 50,
     verbose: bool = True,
     output_dir: str = "./models",
+    metric: str = "accuracy",
 ) -> dict:
     def objective(trial):
         max_depth = trial.suggest_int("max_depth", 3, 256)
@@ -158,8 +160,17 @@ def find_dtc_hyperparams(
         logger.info(f"Testing parameters: {clf.get_params()}")
 
         clf.fit(X_train, y_train)
-        training_score = clf.score(X_train, y_train)
-        score = clf.score(X_val, y_val)
+        if metric == "accuracy":
+            training_score = clf.score(X_train, y_train)
+            score = clf.score(X_val, y_val)
+        elif metric == "f1":
+            y_train_pred = clf.predict(X_train)
+            training_score = f1_score(y_train, y_train_pred, average="weighted")
+            y_val_pred = clf.predict(X_val)
+            score = f1_score(y_val, y_val_pred, average="weighted")
+        else:
+            logger.error(f"Unsupported metric: {metric}")
+            raise ValueError(f"Unsupported metric: {metric}")
         logger.info(f"Validation score: {score} - Training score {training_score}")
         return score
 
@@ -201,6 +212,7 @@ def find_svm_hyperparams(
     n_trials: int = 50,
     verbose: bool = True,
     output_dir: str = "./models",
+    metric: str = "accuracy",
 ) -> dict:
     def objective(trial):
         svc_C = trial.suggest_float("C", 0.1, 1000)
@@ -210,8 +222,17 @@ def find_svm_hyperparams(
         logger.info(f"Testing parameters: {svc.get_params()}")
 
         svc.fit(X_train, y_train)
-        training_score = svc.score(X_train, y_train)
-        score = svc.score(X_val, y_val)
+        if metric == "accuracy":
+            training_score = svc.score(X_train, y_train)
+            score = svc.score(X_val, y_val)
+        elif metric == "f1":
+            y_train_pred = svc.predict(X_train)
+            training_score = f1_score(y_train, y_train_pred, average="weighted")
+            y_val_pred = svc.predict(X_val)
+            score = f1_score(y_val, y_val_pred, average="weighted")
+        else:
+            logger.error(f"Unsupported metric: {metric}")
+            raise ValueError(f"Unsupported metric: {metric}")
         logger.info(f"Validation score: {score} - Training score {training_score}")
         return score
 
