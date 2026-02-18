@@ -1,0 +1,6 @@
+{
+    "max_depth": 35,
+    "min_samples_split": 8,
+    "min_samples_leaf": 7,
+    "criterion": "entropy"
+}
